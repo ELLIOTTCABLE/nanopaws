@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 
-(function(){ var Thing, Association, Execution, Label, Pair, GetLocals, Juxtapose, Value, parse, Stage, Staging
+(function(){ var Thing, Association, Execution, Label, Pair, GetLocals, Juxtapose, Value, parse, Stage, Staging, run
    
    /* Things */
    Thing = function() {
@@ -113,7 +113,7 @@
       Stage.stage(execution, null)
       while (Stage.queue.length > 0) {
          Stage.next()
-         if (Stage.queue.length == 0 && execution.code.length > 0) Stage.stage(execution, null) } }
+         if (Stage.queue.length === 0 && execution.code.length > 0) Stage.stage(execution, null) } }
    
    /* Testing */
    run(process.argv[2])
