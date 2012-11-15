@@ -104,16 +104,17 @@
       
    /* Wrap it all up */
    run = function(text) { var execution = new Execution(parse(text))
-      execution.locals.members.push(new Association(new Pair(new Label('print'), new Execution(function(label) {
-         console.log(label.text) }))))
+      execution.locals.members.push(new Association(new Pair(new Label('print'), new Execution(function(label, context) {
+         console.log(label.text) 
+         Stage.stage(context, null) }))))
       execution.locals.members.push(new Association(new Pair(new Label('set'), new Execution(function(label, context) {
          Stage.stage(context, new Execution(function(value) {
-            context.locals.members.push(new Association(new Pair(label, value))) })) }))))
+            context.locals.members.push(new Association(new Pair(label, value)))
+            Stage.stage(context, null) })) }))))
       execution.locals.members.push(new Association(new Pair(new Label('a'), new Label('b')), true))
       Stage.stage(execution, null)
       while (Stage.queue.length > 0) {
-         Stage.next()
-         if (Stage.queue.length === 0 && execution.code.length > 0) Stage.stage(execution, null) } }
+         Stage.next() } }
    
    /* Testing */
    run(process.argv[2])
