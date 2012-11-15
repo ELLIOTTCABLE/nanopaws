@@ -111,6 +111,7 @@
          Stage.stage(context, new Execution(function(value) {
             context.locals.members.push(new Association(new Pair(label, value)))
             Stage.stage(context, null) })) }))))
+      execution.locals.members.push(new Association(new Pair(new Label('locals'), execution.locals)))
       execution.locals.members.push(new Association(new Pair(new Label('a'), new Label('b')), true))
       Stage.stage(execution, null)
       while (Stage.queue.length > 0) {
