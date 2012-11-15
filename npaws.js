@@ -66,7 +66,7 @@
    /* Execution */
    Thing.prototype.handler = new Execution(function(left, right, context) {
       for (var i = 0; i < left.members.length; i++) {
-         if (left.members[i].key.text === right.text) { Stage.stage(context, left.members[i].value) } }
+         if (left.members[i].to.key.text === right.text) { Stage.stage(context, left.members[i].to.value) } }
          return null; })
    Execution.prototype.handler = new Execution(function(left, right, context) { var instruction
       if (left.code) {
@@ -104,12 +104,12 @@
       
    /* Wrap it all up */
    run = function(text) { var execution = new Execution(parse(text))
-      execution.locals.members.push(new Pair(new Label('print'), new Execution(function(label) {
-         console.log(label.text) })))
-      execution.locals.members.push(new Pair(new Label('set'), new Execution(function(label, context) {
+      execution.locals.members.push(new Association(new Pair(new Label('print'), new Execution(function(label) {
+         console.log(label.text) }))))
+      execution.locals.members.push(new Association(new Pair(new Label('set'), new Execution(function(label, context) {
          Stage.stage(context, new Execution(function(value) {
-            context.locals.members.push(new Pair(label, value)) })) })))
-      execution.locals.members.push(new Pair(new Label('a'), new Label('b')))
+            context.locals.members.push(new Association(new Pair(label, value))) })) }))))
+      execution.locals.members.push(new Association(new Pair(new Label('a'), new Label('b')), true))
       Stage.stage(execution, null)
       while (Stage.queue.length > 0) {
          Stage.next()
