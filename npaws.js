@@ -156,8 +156,11 @@ var USE_COLOR = process.env['USE_COLOR'] === 'false' || true
    
    /* elliottcable-Plumbing */
    I = function I(it) { return it? ANSI.brblack('❲'+it._id+'❳')+it.toString() : ANSI.red('null')  } 
-   log = function log(text) { if (DEBUG)
-      console.log(ANSI.SGR(40)+([].slice.call(arguments).join(', '))+' '+ANSI.SGR(49)) }
+   log = function log(text) { if (DEBUG) { var line = (new Error).stack.split("\n")[2].split(':')[1]
+      console.log( ANSI.SGR(40)
+        +(log.caller.name || '<anon>')+'('+ANSI.brblack('#'+line)+'): '
+        +([].slice.call(arguments).join(', '))
+        +' '+ANSI.SGR(49) ) }}
    ANSI = new Array
    ANSI[30] = 'black';   ANSI[31] = 'red';       ANSI[32] = 'green';   ANSI[33] = 'yellow'
    ANSI[34] = 'blue';    ANSI[35] = 'magenta';   ANSI[36] = 'cyan';    ANSI[37] = 'black'; ANSI[39] = 'reset'
