@@ -8,6 +8,13 @@
    Association = function(to, responsible) {
       this.to = to
       this.responsible = responsible || false }
+   Pair = function(key, value) {
+      this.key = key
+      this.value = value }
+   
+   // Since we're doing a associative-array implementation ...
+   Thing.prototype.affix = function(key, value, responsible) {
+      this.members.push(new Association(new Pair(key, value), responsible)) }
    
    Execution = function(code) {
       Thing.call(this)
@@ -21,10 +28,6 @@
       Thing.call(this)
       this.text = text }
    
-   Pair = function(key, value) {
-      this.key = key
-      this.value = value }
-      
    /* Bytecode */
    GetLocals = function() {
       this.type = 'locals' }
@@ -104,15 +107,15 @@
       
    /* Wrap it all up */
    run = function(text) { var execution = new Execution(parse(text))
-      execution.locals.members.push(new Association(new Pair(new Label('print'), new Execution(function(label, context) {
+      execution.locals.affix(new Label('print'), new Execution(function(label, context) {
          console.log(label.text) 
-         Stage.stage(context, null) }))))
-      execution.locals.members.push(new Association(new Pair(new Label('set'), new Execution(function(label, context) {
+         Stage.stage(context, null) }))
+      execution.locals.affix(new Label('set'), new Execution(function(label, context) {
          Stage.stage(context, new Execution(function(value) {
-            context.locals.members.push(new Association(new Pair(label, value)))
-            Stage.stage(context, null) })) }))))
-      execution.locals.members.push(new Association(new Pair(new Label('locals'), execution.locals)))
-      execution.locals.members.push(new Association(new Pair(new Label('a'), new Label('b')), true))
+            context.locals.affix(label, value)
+            Stage.stage(context, null) })) }))
+      execution.locals.affix(new Label('locals'), execution.locals)
+      execution.locals.affix(new Label('a'), new Label('b'), true)
       Stage.stage(execution, null)
       while (Stage.queue.length > 0) {
          Stage.next() } }
