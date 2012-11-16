@@ -138,6 +138,9 @@ var USE_COLOR = process.env['USE_COLOR'] === 'false' || true
    /* Wrap it all up */
    run = function run(text) { var
       execution = new Execution(parse(text))._name(ANSI.brmagenta('root'))
+      execution.locals.affix(new Label('whee!'), new Execution(function(label, context) {
+         console.log('whee!')
+         Stage.stage(context, null) }))
       execution.locals.affix(new Label('print'), new Execution(function(label, context) {
          console.log(label.text)
          Stage.stage(context, null) }))
