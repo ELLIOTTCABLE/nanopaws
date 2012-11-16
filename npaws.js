@@ -8,29 +8,29 @@ var USE_COLOR = process.env['USE_COLOR'] === 'false' || true
    
 , API = function(){
    /* Things */
-   Thing = function() {
+   Thing = function Thing() {
       this._id = Thing.counter++
       this.members = [] }
-   Association = function(to, responsible) {
    Thing.counter = 1
+   Association = function Association(to, responsible) {
       this.to = to
       this.responsible = responsible || false }
-   Pair = function(key, value) {
+   Pair = function Pair(key, value) {
       this.key = key
       this.value = value }
    
-   getter(Thing.prototype, 'named', function() { return this.hasOwnProperty('name') })
-   Thing.prototype.name = function(name) { this.name = name; return this }
-   Thing.prototype._name = function(name) { this.toString = function toString(){return name}; return this }
-   Thing.prototype.toString = function() { return this.named? this.name:'' }
-   Thing.prototype.inspect = function() { return ANSI.brblack('❲'+this._id+'❳')+this.toString() } 
+   getter(Thing.prototype, 'named', function named() { return this.hasOwnProperty('name') })
+   Thing.prototype.name = function name(name) { this.name = name; return this }
+   Thing.prototype._name = function _name(name) { this.toString = function toString(){return name}; return this }
+   Thing.prototype.toString = function toString() { return this.named? this.name:'' }
+   Thing.prototype.inspect = function inspect() { return ANSI.brblack('❲'+this._id+'❳')+this.toString() } 
    
    // Since we're doing a associative-array implementation ...
-   Thing.prototype.affix = function(key, value, responsible) {
+   Thing.prototype.affix = function affix(key, value, responsible) {
       if (key instanceof Label && !value.named) value.name = key.text
       this.members.push(new Association(new Pair(key, value), responsible)) }
    
-   Execution = function(code) {
+   Execution = function Execution(code) {
       Thing.call(this)
       if (typeof code === 'function') {
          this.native = code
@@ -41,48 +41,48 @@ var USE_COLOR = process.env['USE_COLOR'] === 'false' || true
          this.locals = new Thing()._name(ANSI.brblack('locals')) } }
    Execution.prototype = new Thing()
    
-   Execution.prototype.toString = function() {
+   Execution.prototype.toString = function toString() {
       return ANSI.brmagenta(this.named? '`'+this.name+'`' : '´anon´') }
    
-   Label = function(text) {
+   Label = function Label(text) {
       Thing.call(this)
       this.text = text }
    Label.prototype = new Thing()
    
-   Label.prototype.toString = function() { return ANSI.cyan("'"+this.text+"'") }
+   Label.prototype.toString = function toString() { return ANSI.cyan("'"+this.text+"'") }
    
    /* Bytecode */
-   GetLocals = function() {
+   GetLocals = function GetLocals() {
       this.type = 'locals' }
-   Juxtapose = function() {
+   Juxtapose = function Juxtapose() {
       this.type = 'juxtapose' }
-   Value = function(contents) {
+   Value = function Value(contents) {
       this.type = 'value'
       this.contents = contents }
    
    /* Parsing */
-   parse = function(text) { var i = 0
-      , character = function(c){ return text[i] === c && ++i }
-      , whitespace = function(){ while (character(' ')); return true }
-      , bracket = function(begin, end) { var result
+   parse = function parse(text) { var i = 0
+      , character = function character(c){ return text[i] === c && ++i }
+      , whitespace = function whitespace(){ while (character(' ')); return true }
+      , bracket = function bracket(begin, end) { var result
          return whitespace() && character(begin) && (result = expr()) &&
                 whitespace() && character(end) &&
                 result }
       
-      , paren = function() {
+      , paren = function parse() {
          return bracket('(', ')') }
-      , scope = function() { var result
+      , scope = function scope() { var result
          return (result = bracket('{', '}')) && [new Value(new Execution(result))] }
-      , label = function(){ whitespace(); var result = ''
+      , label = function label(){ whitespace(); var result = ''
            while ( text[i] && /[^(){} \n;]/.test(text[i]) )
               result = result.concat(text[i++])
            return result && [new Value(new Label(result))] }
       
-      , expr = function() { var term, result = [new GetLocals()]
+      , expr = function expr() { var term, result = [new GetLocals()]
          while (term = paren() || scope() || label())
             result = result.concat(term).concat(new Juxtapose())
          return result }
-      , program = function() { var line, result = expr()
+      , program = function program() { var line, result = expr()
          while ((character('\n') || character(';')) && (line = expr()))
             result = result.concat(line)
          return result }
@@ -113,20 +113,20 @@ var USE_COLOR = process.env['USE_COLOR'] === 'false' || true
    Stage = {}
    Stage.queue = []
    
-   Staging = function(stagee, value, context) {
+   Staging = function Staging(stagee, value, context) {
       this.stagee = stagee
       this.value = value
       this.context = context }
    
-   Stage.stage = function(stagee, value, context) {
+   Stage.stage = function stage(stagee, value, context) {
       Stage.queue.push(new Staging(stagee, value, context)) }
-   Stage.result = function(context, value) { var caller = arguments.callee.caller
+   Stage.result = function result(context, value) { var caller = arguments.callee.caller
       if (value instanceof Execution && arguments.callee.caller.wrapper instanceof Execution
       &&  caller.wrapper.named && !value.named)
           value.name = caller.wrapper.name + '.' // Accrue periods onto the name for each coconsumer
       Stage.stage(context, value || null) }
    
-   Stage.next = function() {
+   Stage.next = function next() {
       var staging = Stage.queue.shift()
       log(I(staging.stagee)+' ✦ '+I(staging.value))
       if (staging.stagee.native) {
@@ -136,7 +136,7 @@ var USE_COLOR = process.env['USE_COLOR'] === 'false' || true
 } // /API
       
    /* Wrap it all up */
-   run = function(text) { var
+   run = function run(text) { var
       execution = new Execution(parse(text))._name(ANSI.brmagenta('root'))
       execution.locals.affix(new Label('print'), new Execution(function(label, context) {
          console.log(label.text)
@@ -155,19 +155,19 @@ var USE_COLOR = process.env['USE_COLOR'] === 'false' || true
          Stage.next() } }
    
    /* elliottcable-Plumbing */
-   I = function(it) { return it? ANSI.brblack('❲'+it._id+'❳')+it.toString() : ANSI.red('null')  } 
-   log = function(text) { if (DEBUG)
+   I = function I(it) { return it? ANSI.brblack('❲'+it._id+'❳')+it.toString() : ANSI.red('null')  } 
+   log = function log(text) { if (DEBUG)
       console.log(ANSI.SGR(40)+([].slice.call(arguments).join(', '))+' '+ANSI.SGR(49)) }
    ANSI = new Array
    ANSI[30] = 'black';   ANSI[31] = 'red';       ANSI[32] = 'green';   ANSI[33] = 'yellow'
    ANSI[34] = 'blue';    ANSI[35] = 'magenta';   ANSI[36] = 'cyan';    ANSI[37] = 'black'; ANSI[39] = 'reset'
    ANSI[90] = 'brblack'; ANSI[91] = 'brred';     ANSI[92] = 'brgreen'; ANSI[93] = 'yellow'
    ANSI[94] = 'brblue';  ANSI[95] = 'brmagenta'; ANSI[96] = 'brcyan';  ANSI[97] = 'black'; 
-   ANSI.SGR = function(text){ return USE_COLOR? '\033['+text+'m' : '' }
-   ANSI.forEach(function(name, code, ANSI){ ANSI[name] = function(text){
-      return ANSI.SGR(code) + text + ANSI.SGR(39) } })
+   ANSI.SGR = function SGR(text){ return USE_COLOR? '\033['+text+'m' : '' }
+   ANSI.forEach(function(name, code, _ANSI){ _ANSI[name] = function ANSI(text){
+      return _ANSI.SGR(code) + text + _ANSI.SGR(39) } })
    
-   getter = function(object, property, getter) {
+   getter = function getter(object, property, getter) {
       if (!object.hasOwnProperty(property))
          Object.defineProperty(object, property, { get:getter, enumerable:false }) }
    
