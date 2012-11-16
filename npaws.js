@@ -104,6 +104,9 @@
       execution.locals.members.push(new Association(new Label('set'), new Execution(function(label, context) {
          Stage.stage(context, new Execution(function(value) {
             context.locals.members.push(new Association(label, value)) })) })))
+      execution.locals.members.push(new Association(new Label('stage'), new Execution(function(stagee, context) {
+         Stage.stage(context, new Execution(function(value, context) {
+            Stage.stage(stagee, value) })) })))
       execution.locals.members.push(new Association(new Label('a'), new Label('b')))
       Stage.stage(execution, null)
       while (Stage.queue.length > 0) {
