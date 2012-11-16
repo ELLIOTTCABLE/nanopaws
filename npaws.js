@@ -24,9 +24,12 @@
          this.code = code
          this.stack = []
          this.locals = new Thing() } }
+   Execution.prototype = new Thing()
+   
    Label = function(text) {
       Thing.call(this)
       this.text = text }
+   Label.prototype = new Thing()
    
    /* Bytecode */
    GetLocals = function() {
