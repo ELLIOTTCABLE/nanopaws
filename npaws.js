@@ -113,10 +113,11 @@
       execution.locals.affix(new Label('print'), new Execution(function(label, context) {
          console.log(label.text) 
          Stage.stage(context, null) }))
-      execution.locals.affix(new Label('set'), new Execution(function(label, context) {
-         Stage.stage(context, new Execution(function(value) {
-            context.locals.affix(label, value)
-            Stage.stage(context, null) })) }))
+      execution.locals.affix(new Label('affix'), new Execution(function(receiver, context) {
+                            Stage.stage(context, new Execution(function(label, context) {
+                            Stage.stage(context, new Execution(function(value, context) {
+         receiver.affix(label, value)
+         Stage.stage(context, null) })) })) }))
       execution.locals.affix(new Label('locals'), execution.locals)
       execution.locals.affix(new Label('a'), new Label('b'), true)
       Stage.stage(execution, null)
