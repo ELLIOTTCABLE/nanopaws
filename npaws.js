@@ -155,6 +155,8 @@ var USE_COLOR      = process.env['USE_COLOR'] === 'false' || true
       this.stagee = stagee
       this.value = value
       this.context = context }
+   Staging.prototype.toString = function toString() {
+      return this.stagee.toString()+'×'+this.value.toString() }
    
    Stage.stage = function stage(stagee, value, context) {
       Stage.queue.push(new Staging(stagee, value, context)) }
@@ -165,8 +167,9 @@ var USE_COLOR      = process.env['USE_COLOR'] === 'false' || true
       Stage.stage(context, value || null) }
    
    Stage.next = function next() {
+      debug()('['+Stage.queue.map(function(st){
+         return P(st.stagee)+' × '+P(st.value)}).join(', ')+']')
       var staging = Stage.queue.shift()
-      debug()(P(staging.stagee)+' × '+P(staging.value))
       if (staging.stagee.handler.native) {
          staging.stagee.handler.native(staging.stagee, staging.value, staging.context) } }
    
@@ -294,5 +297,9 @@ var USE_COLOR      = process.env['USE_COLOR'] === 'false' || true
    
    /* Testing */
    API()
-   run(process.argv[2])
+   
+   switch (process.argv[2]) {
+      case '-f': run(require('fs').readFileSync(process.argv[3], 'utf8'))
+      case '-e': process.argv[2] = process.argv[3]
+        default: run(process.argv[2]) }
 }()
