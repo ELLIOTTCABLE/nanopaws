@@ -31,12 +31,18 @@ var USE_COLOR      = process.env['USE_COLOR'] === 'false' || true
       if (key instanceof Label && !value.named) value.name = key.text
       this.members.push(new Association(new Pair(key, value), responsible)) }
    
+   Label = function Label(text) { Thing.call(this)
+      this.text = text }
+ ;(Label.prototype = new Thing).constructor = Label
+   Label.prototype.toString = function toString() { return ANSI.cyan("'"+this.text+"'") }
+   
    Execution = function Execution(code) { Thing.call(this)
       if (typeof code === 'function')
          return new Alien(code)
       this.code = code
       this.stack = []
-      this.locals = new Thing()._name(ANSI.brblack('locals')) }
+      this.locals = new Thing()._name(ANSI.brblack('locals'))
+      this.locals.affix(new Label('locals'), this.locals) }
  ;(Execution.prototype = new Thing).constructor = Execution
    Execution.prototype.toString = function toString() {
       return ANSI.brmagenta(this.named? '`'+this.name+'`' : '`anon`') }
@@ -57,11 +63,6 @@ var USE_COLOR      = process.env['USE_COLOR'] === 'false' || true
    Alien.prototype.toString = function toString() {
       return ANSI.brmagenta(this.named? '´'+this.name+'´' : '´anon´') }
    Alien.prototype.inspect = Thing.prototype.inspect
-   
-   Label = function Label(text) { Thing.call(this)
-      this.text = text }
- ;(Label.prototype = new Thing).constructor = Label
-   Label.prototype.toString = function toString() { return ANSI.cyan("'"+this.text+"'") }
    
    /* Bytecode */
    Instruction = function Instruction() {}
