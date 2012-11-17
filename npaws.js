@@ -3,7 +3,7 @@ var USE_COLOR = process.env['USE_COLOR'] === 'false' || true
   ,     DEBUG = process.env['DEBUG']     === 'false' || true
 
 
-~function(){ var Thing, Association, Execution, Label, Pair, Instruction, Locals, Juxtapose, Value, parse, Stage, Staging, run
+~function(){ var Thing, Association, Execution, Alien, Label, Pair, Instruction, Locals, Juxtapose, Value, parse, Stage, Staging, run
                , log, I, ANSI, getter
    
 , API = function(){
@@ -30,41 +30,56 @@ var USE_COLOR = process.env['USE_COLOR'] === 'false' || true
       if (key instanceof Label && !value.named) value.name = key.text
       this.members.push(new Association(new Pair(key, value), responsible)) }
    
-   Execution = function Execution(code) {
-      Thing.call(this)
-      if (typeof code === 'function') {
-         this.native = code
-         this.native.wrapper = this
-         if (this.native.name) this.name = this.native.name }
-      else {
-         this.code = code
-         this.stack = []
-         this.locals = new Thing()._name(ANSI.brblack('locals')) } }
+   Execution = function Execution(code) { Thing.call(this)
+      if (typeof code === 'function')
+         return new Alien(code)
+      this.code = code
+      this.stack = []
+      this.locals = new Thing()._name(ANSI.brblack('locals')) }
  ;(Execution.prototype = new Thing).constructor = Execution
-   
    Execution.prototype.toString = function toString() {
-      return ANSI.brmagenta(this.named? '`'+this.name+'`' : '´anon´') }
+      return ANSI.brmagenta(this.named? '`'+this.name+'`' : '`anon`') }
+   Execution.prototype.inspect = function() { var rv = new Array
+      rv.push(ANSI.brwhite('|') + this.stack.map(function(e){
+         return Thing.prototype.inspect.call(e) })
+            .join(ANSI.brwhite(', ')) + ANSI.brwhite('|'))
+      rv.push(ANSI.brwhite('[') + this.code.map(function(e){
+         return e.inspect() })
+            .join(ANSI.brwhite(' ')) + ANSI.brwhite(']'))
+      return rv.join("\n") }
    
-   Label = function Label(text) {
-      Thing.call(this)
+   Alien = function Alien(code) { Execution.call(this)
+      this.native = code
+      this.native.wrapper = this
+      if (this.native.name) this.name = this.native.name }
+ ;(Alien.prototype = new Execution).constructor = Alien
+   Alien.prototype.toString = function toString() {
+      return ANSI.brmagenta(this.named? '´'+this.name+'´' : '´anon´') }
+   Alien.prototype.inspect = Thing.prototype.inspect
+   
+   Label = function Label(text) { Thing.call(this)
       this.text = text }
  ;(Label.prototype = new Thing).constructor = Label
-   
    Label.prototype.toString = function toString() { return ANSI.cyan("'"+this.text+"'") }
    
    /* Bytecode */
    Instruction = function Instruction() {}
+   Instruction.prototype.toString = function toString() { return ANSI.brwhite('I') }
+   Instruction.prototype.inspect = function inspect() { return this.toString.apply(this, arguments) }
    
    Locals = function Locals() { Instruction.call(this) }
  ;(Locals.prototype = new Instruction).constructor = Locals
    
    Juxtapose = function Juxtapose() { Instruction.call(this) }
  ;(Juxtapose.prototype = new Instruction).constructor = Juxtapose
+   Juxtapose.prototype.toString = function toString() { return ANSI.brwhite('×') }
    
    Value = function Value(contents) { Instruction.call(this)
       this.contents = contents }
  ;(Value.prototype = new Instruction).constructor = Value
-
+   Value.prototype.toString = function toString() {
+      return ANSI.brwhite('I:')+this.contents.toString() }
+   
    
    /* Parsing */
    parse = function parse(text) { var i = 0
@@ -172,10 +187,12 @@ var USE_COLOR = process.env['USE_COLOR'] === 'false' || true
         +' '+ANSI.SGR(49) ) }}
    ANSI = new Array
    ANSI[30] = 'black';   ANSI[31] = 'red';       ANSI[32] = 'green';   ANSI[33] = 'yellow'
-   ANSI[34] = 'blue';    ANSI[35] = 'magenta';   ANSI[36] = 'cyan';    ANSI[37] = 'black'; ANSI[39] = 'reset'
-   ANSI[90] = 'brblack'; ANSI[91] = 'brred';     ANSI[92] = 'brgreen'; ANSI[93] = 'yellow'
-   ANSI[94] = 'brblue';  ANSI[95] = 'brmagenta'; ANSI[96] = 'brcyan';  ANSI[97] = 'black'; 
+   ANSI[34] = 'blue';    ANSI[35] = 'magenta';   ANSI[36] = 'cyan';    ANSI[37] = 'white'; ANSI[39] = 'reset'
+   ANSI[90] = 'brblack'; ANSI[91] = 'brred';     ANSI[92] = 'brgreen'; ANSI[93] = 'bryellow'
+   ANSI[94] = 'brblue';  ANSI[95] = 'brmagenta'; ANSI[96] = 'brcyan';  ANSI[97] = 'brwhite'; 
    ANSI.SGR = function SGR(text){ return USE_COLOR? '\033['+text+'m' : '' }
+   ANSI.regex = /\x1B\[([0-9]+(;[0-9]+)*)?m/g
+   ANSI.strip = function strip(text){ return text.replace(ANSI.regex,'') }
    ANSI.forEach(function(name, code, _ANSI){ _ANSI[name] = function ANSI(text){
       return _ANSI.SGR(code) + text + _ANSI.SGR(39) } })
    
