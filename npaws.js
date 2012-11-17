@@ -41,7 +41,7 @@ var USE_COLOR      = process.env['USE_COLOR'] === 'false' || true
    Execution.prototype.toString = function toString() {
       return ANSI.brmagenta(this.named? '`'+this.name+'`' : '`anon`') }
    Execution.prototype.inspect = function() { var rv = new Array
-      rv.push(ANSI.brwhite('[') + this.stack.slice(1).map(function(e){
+      rv.push(ANSI.brwhite('[') + this.stack.slice(1).reverse().map(function(e){
          return Thing.prototype.inspect.call(e) })
             .join(ANSI.brwhite(', ')) + ANSI.brwhite(']'))
       rv.push(ANSI.brwhite('|') + this.code.map(function(e){
@@ -187,12 +187,12 @@ var USE_COLOR      = process.env['USE_COLOR'] === 'false' || true
       if (!root.code) log()(ANSI.bold('-- Complete!')) }
    
    /* elliottcable-Plumbing */
-   P = function P(it) {return (log.element||noop)(
+   P = function P(it) {return (log.element||noop).call(log,
       it instanceof Thing? Thing.prototype.inspect.apply(it)
     : (it? it.toString() : ANSI.red('null')) )}
    I = function I(it) { var a, b, tag
       if (!(it instanceof Thing)) return (it?
-         (it.inspect? it.inspect:it.toString)() : ANSI.red('null') )
+         (it.inspect? it.inspect:it.toString).call(it) : ANSI.red('null') )
       if (/\n/.test(a = it.inspect()) && log.element) { tag = Thing.inspect(it, true)
          b = log.element(tag + it.toString()); log.extra(tag, a); return b }
          else return a }
