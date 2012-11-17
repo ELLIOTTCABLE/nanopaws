@@ -34,7 +34,8 @@ var USE_COLOR = process.env['USE_COLOR'] === 'false' || true
       Thing.call(this)
       if (typeof code === 'function') {
          this.native = code
-         this.native.wrapper = this }
+         this.native.wrapper = this
+         if (this.native.name) this.name = this.native.name }
       else {
          this.code = code
          this.stack = []
@@ -95,11 +96,13 @@ var USE_COLOR = process.env['USE_COLOR'] === 'false' || true
       return program() }
    
    /* Execution */
-   Thing.prototype.handler = new Execution(function(left, right, context) {
+   Thing.prototype.handler = new Execution(function _thing_(left, right, context) {
       for (var i = 0; i < left.members.length; i++) {
          if (left.members[i].to.key.text === right.text) { Stage.stage(context, left.members[i].to.value) } }
          return null; })
-   Execution.prototype.handler = new Execution(function(left, right, context) { var instruction
+   Execution.prototype.handler = new Execution(function _execution_(left, right, context) { var instruction
+      if (left.native)
+         return left.native(right, context)
       if (left.code) {
          left.stack.push(right)
          while (left.code.length > 0) { instruction = left.code.shift()
@@ -134,9 +137,7 @@ var USE_COLOR = process.env['USE_COLOR'] === 'false' || true
    Stage.next = function next() {
       var staging = Stage.queue.shift()
       log(I(staging.stagee)+' ✦ '+I(staging.value))
-      if (staging.stagee.native) {
-         staging.stagee.native(staging.value, staging.context) }
-      else if (staging.stagee.handler.native) {
+      if (staging.stagee.handler.native) {
          staging.stagee.handler.native(staging.stagee, staging.value, staging.context) } }
 } // /API
       
