@@ -1,10 +1,10 @@
 #!/usr/bin/env node
 var USE_COLOR      = process.env['USE_COLOR'] === 'false' || true
   , DEBUG = parseInt(process.env['DEBUG'])
-  , DEBUG = DEBUG === 0? 0:(DEBUG || 7)
+  , DEBUG = DEBUG === 0? 0:(DEBUG || 6)
 
 ~function(){ var Thing, Association, Execution, Alien, Label, Pair, Instruction, Locals, Juxtapose, Value, parse, Stage, Staging, run
-               , debug, log, P, I, ANSI, getter, noop
+               , debug, log, D, P, I, ANSI, getter, noop
    
 , API = function(){
    /* Things */
@@ -113,18 +113,18 @@ var USE_COLOR      = process.env['USE_COLOR'] === 'false' || true
    
    /* Execution */
    Thing.prototype.handler = new Execution(function _thing_(left, right, context) {
-      DEBUG? log('    × thing: ')(P(left), P(right), P(context)) :0
+      D(7)? log('    × thing: ')(P(left), P(right), P(context)) :0
       for (var i = 0; i < left.members.length; i++) {
          if (left.members[i].to.key.text === right.text) { Stage.stage(context, left.members[i].to.value) } }
          return null; })
    Execution.prototype.handler = new Execution(function _execution_(left, right, context) { var instruction
-      DEBUG? log('    × exe:   ')(P(left), P(right), P(context)) :0
+      D(7)? log('    × exe:   ')(P(left), P(right), P(context)) :0
       if (left.native)
          return left.native(right, context)
       if (left.code) {
          left.stack.push(left.stack.length == 0? null : right)
          while (left.code.length > 0) { instruction = left.code.shift()
-            DEBUG? log('          >> ')(I(instruction), I(left)) :0
+            D(8)? log('          >> ')(I(instruction), I(left)) :0
             switch (instruction.constructor.name) {
                case 'Locals':
                   left.stack.push(left.locals);
@@ -163,7 +163,7 @@ var USE_COLOR      = process.env['USE_COLOR'] === 'false' || true
    /* Wrap it all up */
    run = function run(text) { var
       execution = new Execution(parse(text))._name(ANSI.brmagenta('root'))
-      log()(I(execution))
+      D(6)? log()(I(execution)) :0
       
       execution.locals.affix(new Label('whee!'), new Execution(function(label, context) {
          console.log('whee!')
@@ -184,9 +184,11 @@ var USE_COLOR      = process.env['USE_COLOR'] === 'false' || true
       while (Stage.queue.length > 0) {
          Stage.next() }
       
-      if (!root.code) log()(ANSI.bold('-- Complete!')) }
+      if (!root.code)
+         D(6)? log()(ANSI.bold('-- Complete!')) :0 }
    
    /* elliottcable-Plumbing */
+   D = function D(l)  {return DEBUG>=l}
    P = function P(it) {return (log.element||noop).call(log,
       it instanceof Thing? Thing.prototype.inspect.apply(it)
     : (it? it.toString() : ANSI.red('null')) )}
@@ -197,9 +199,9 @@ var USE_COLOR      = process.env['USE_COLOR'] === 'false' || true
          b = log.element(tag + it.toString()); log.extra(tag, a); return b }
          else return a }
    
-   debug = function debug(level){ level = level || 5
+   debug = function debug(level, before){ level = level || 7; before = before || ''
       before = (debug.caller.name || '<anon>')
-         +'('+ANSI.brblack('#'+(new Error).stack.split("\n")[2].split(':')[1])+'): '
+         +'('+ANSI.brblack('#'+(new Error).stack.split("\n")[2].split(':')[1])+'): '+before
       return DEBUG >= level? log(before):new Function }
    
    log = function log_start(before){ var indent, elements = new Array
