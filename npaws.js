@@ -3,7 +3,7 @@ var USE_COLOR      = process.env['USE_COLOR'] === 'false' || true
   , DEBUG = parseInt(process.env['DEBUG'])
   , DEBUG = DEBUG === 0? 0:(DEBUG || 6)
 
-~function(){ var Thing, Association, Execution, Alien, Label, Pair, Instruction, Locals, Juxtapose, Value, parse, Stage, Staging, run
+~function(){ var Thing, Association, Execution, Alien, Label, Pair, Instruction, Locals, Juxtapose, Value, parse, Stage, Staging, aliens, run
                , debug, log, D, P, I, ANSI, getter, noop
    
 , API = function(){
@@ -167,32 +167,40 @@ var USE_COLOR      = process.env['USE_COLOR'] === 'false' || true
       debug()(P(staging.stagee)+' × '+P(staging.value))
       if (staging.stagee.handler.native) {
          staging.stagee.handler.native(staging.stagee, staging.value, staging.context) } }
+   
+   /* Aliens */
+   aliens = {
+     'whee!': new Execution(function(caller) { Stage.stage(caller, null) 
+         console.log('whee!') })
+      
+    , print: new Execution(function(caller) {
+         Stage.result(caller, new Execution(function(label) { Stage.stage(caller, null)
+            console.log(label.text) })) })
+      
+    , inspect: new Execution(function(caller) {
+         Stage.result(caller, new Execution(function(thing) { Stage.stage(caller, null)
+            console.log(thing.toString())
+            D(5)? log(3)(thing.inspect()) :0 })) })
+      
+    , affix: new Execution(function(caller) {
+         Stage.result(caller, new Execution(function(receiver) {
+         Stage.result(caller, new Execution(function(label) {
+         Stage.result(caller, new Execution(function(value) { Stage.stage(caller, null)
+            receiver.affix(label, value) })) })) })) })
+   }
 } // /API
       
    /* Wrap it all up */
    run = function run(text) { var
-      execution = new Execution(parse(text))._name(ANSI.brmagenta('root'))
-      D(6)? log()(I(execution)) :0
+      root = new Execution(parse(text))._name(ANSI.brmagenta('root'))
+      D(6)? log()(I(root)) :0
       
-      execution.locals.affix(new Label('whee!'), new Execution(function(caller) {
-         console.log('whee!')
-         Stage.stage(caller, null) }))
-      execution.locals.affix(new Label('print'), new Execution(function(caller) {
-                            Stage.result(caller, new Execution(function(label) {
-         console.log(label.text)
-         Stage.stage(caller, null) })) }))
-      execution.locals.affix(new Label('inspect'), new Execution(function(caller) {
-                              Stage.result(caller, new Execution(function(thing) {
-         console.log(thing.inspect())
-         Stage.stage(caller, null) })) }))
-      execution.locals.affix(new Label('affix'), new Execution(function(caller) {
-                            Stage.result(caller, new Execution(function(receiver) {
-                            Stage.result(caller, new Execution(function(label) {
-                            Stage.result(caller, new Execution(function(value) {
-         receiver.affix(label, value)
-         Stage.stage(caller, null) })) })) })) }))
+    , infrastructure = new Thing
+      root.locals.affix(new Label('infrastructure'), infrastructure)
+      Object.getOwnPropertyNames(aliens).forEach(function(key){
+         infrastructure.affix(new Label(key), aliens[key]) })
       
-      Stage.stage(execution, null)
+      Stage.stage(root, null)
       while (Stage.queue.length > 0) {
          Stage.next() }
       
