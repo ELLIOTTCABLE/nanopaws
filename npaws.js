@@ -26,6 +26,9 @@ var USE_COLOR      = process.env['USE_COLOR'] === 'false' || true
    Thing.prototype.inspect = function inspect() { return Thing.inspect(this, false) } 
    Thing.inspect = function inspect(it, bare) { return ANSI.brblack('❲'+it._id+'❳')+(bare? '':it.toString()) }
    
+   Thing.prototype.lookup = function lookup(key) {
+      for (var i = 0; i < this.members.length; i++) {
+         if (this.members[i].to.key.text === key.text) { return this.members[i].to.value } } }
    // Since we're doing a associative-array implementation ...
    Thing.prototype.affix = function affix(key, value, responsible) {
       if (key instanceof Label && !value.named) value.name = key.text
@@ -42,6 +45,7 @@ var USE_COLOR      = process.env['USE_COLOR'] === 'false' || true
       this.code = code
       this.stack = []
       this.locals = new Thing()._name(ANSI.brblack('locals'))
+      this       .affix(new Label('locals'), this.locals)
       this.locals.affix(new Label('locals'), this.locals) }
  ;(Execution.prototype = new Thing).constructor = Execution
    Execution.prototype.toString = function toString() {
@@ -121,9 +125,7 @@ var USE_COLOR      = process.env['USE_COLOR'] === 'false' || true
    /* Execution */
    Thing.prototype.handler = new Execution(function _thing_(left, right, context) {
       D(7)? log('    × thing: ')(P(left), P(right), P(context)) :0
-      for (var i = 0; i < left.members.length; i++) {
-         if (left.members[i].to.key.text === right.text) { Stage.stage(context, left.members[i].to.value) } }
-         return null; })
+         Stage.stage(context, left.lookup(right)) })
    Execution.prototype.handler = new Execution(function _execution_(left, right, context) { var instruction
       D(7)? log('    × exe:   ')(P(left), P(right), P(context)) :0
       if (left.native)
@@ -187,7 +189,33 @@ var USE_COLOR      = process.env['USE_COLOR'] === 'false' || true
          Stage.result(caller, new Execution(function(label) {
          Stage.result(caller, new Execution(function(value) { Stage.stage(caller, null)
             receiver.affix(label, value) })) })) })) })
-   }
+      
+    , get: new Execution(function(caller) {
+         Stage.result(caller, new Execution(function(receiver) {
+         Stage.result(caller, new Execution(function(number) {
+            Stage.result(caller, receiver.members[parseInt(number.text)].to.value) })) })) })
+      
+    , lookup: new Execution(function(caller) {
+         Stage.result(caller, new Execution(function(receiver) {
+         Stage.result(caller, new Execution(function(key) {
+            Stage.result(caller, receiver.lookup(key)) })) })) })
+      
+      // Shouldn't rightfully have a “key” argument, but we're doing ‘pairs’ here
+    , set: new Execution(function(caller) {
+         Stage.result(caller, new Execution(function(receiver) {
+         Stage.result(caller, new Execution(function(number) {
+         Stage.result(caller, new Execution(function(key) {
+         Stage.result(caller, new Execution(function(value) { Stage.stage(caller, null)
+            receiver.members[parseInt(number.text)]
+               = new Association(new Pair(key, value)) })) })) })) })) })
+      
+    , execution: {
+         unstage: new Execution(function(){})
+       , stage: new Execution(function(caller){
+            Stage.result(caller, new Execution(function(receiver) {
+            Stage.result(caller, new Execution(function(value) { Stage.stage(caller, null)
+               Stage.stage(receiver, value) })) })) })
+      } }
 } // /API
       
    /* Wrap it all up */
@@ -197,8 +225,11 @@ var USE_COLOR      = process.env['USE_COLOR'] === 'false' || true
       
     , infrastructure = new Thing
       root.locals.affix(new Label('infrastructure'), infrastructure)
-      Object.getOwnPropertyNames(aliens).forEach(function(key){
-         infrastructure.affix(new Label(key), aliens[key]) })
+      
+    ;(function $$(container){
+      Object.getOwnPropertyNames(container).forEach(function(key){
+         if (container[key] instanceof Execution) return infrastructure.affix(new Label(key), container[key])
+         return $$(container[key]) }) })(aliens)
       
       Stage.stage(root, null)
       while (Stage.queue.length > 0) {
