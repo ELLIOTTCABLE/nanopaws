@@ -41,12 +41,12 @@ var USE_COLOR      = process.env['USE_COLOR'] === 'false' || true
    Execution.prototype.toString = function toString() {
       return ANSI.brmagenta(this.named? '`'+this.name+'`' : '`anon`') }
    Execution.prototype.inspect = function() { var rv = new Array
-      rv.push(ANSI.brwhite('|') + this.stack.slice(1).map(function(e){
+      rv.push(ANSI.brwhite('[') + this.stack.slice(1).map(function(e){
          return Thing.prototype.inspect.call(e) })
-            .join(ANSI.brwhite(', ')) + ANSI.brwhite('|'))
-      rv.push(ANSI.brwhite('[') + this.code.map(function(e){
+            .join(ANSI.brwhite(', ')) + ANSI.brwhite(']'))
+      rv.push(ANSI.brwhite('|') + this.code.map(function(e){
          return e.inspect() })
-            .join(ANSI.brwhite(' ')) + ANSI.brwhite(']'))
+            .join(ANSI.brwhite(' ')) + ANSI.brwhite('|'))
       return rv.join("\n") }
    
    Alien = function Alien(code) { Execution.call(this)
@@ -124,7 +124,7 @@ var USE_COLOR      = process.env['USE_COLOR'] === 'false' || true
       if (left.code) {
          left.stack.push(left.stack.length == 0? null : right)
          while (left.code.length > 0) { instruction = left.code.shift()
-            DEBUG? log('          >> ')(I(left)) :0
+            DEBUG? log('          >> ')(I(instruction), I(left)) :0
             switch (instruction.constructor.name) {
                case 'Locals':
                   left.stack.push(left.locals);
@@ -182,13 +182,17 @@ var USE_COLOR      = process.env['USE_COLOR'] === 'false' || true
       execution.locals.affix(new Label('a'), new Label('b'), true)
       Stage.stage(execution, null)
       while (Stage.queue.length > 0) {
-         Stage.next() } }
+         Stage.next() }
+      
+      if (!root.code) log()(ANSI.bold('-- Complete!')) }
    
    /* elliottcable-Plumbing */
    P = function P(it) {return (log.element||noop)(
-      it instanceof Thing? Thing.prototype.inspect.apply(it) : ANSI.red('null') )}
+      it instanceof Thing? Thing.prototype.inspect.apply(it)
+    : (it? it.toString() : ANSI.red('null')) )}
    I = function I(it) { var a, b, tag
-      if (!(it instanceof Thing)) return ANSI.red('null')
+      if (!(it instanceof Thing)) return (it?
+         (it.inspect? it.inspect:it.toString)() : ANSI.red('null') )
       if (/\n/.test(a = it.inspect()) && log.element) { tag = Thing.inspect(it, true)
          b = log.element(tag + it.toString()); log.extra(tag, a); return b }
          else return a }
@@ -216,15 +220,19 @@ var USE_COLOR      = process.env['USE_COLOR'] === 'false' || true
          
          delete log.element; delete log.extra }}
    ANSI = new Array
-   ANSI[30] = 'black';   ANSI[31] = 'red';       ANSI[32] = 'green';   ANSI[33] = 'yellow'
-   ANSI[34] = 'blue';    ANSI[35] = 'magenta';   ANSI[36] = 'cyan';    ANSI[37] = 'white'; ANSI[39] = 'reset'
-   ANSI[90] = 'brblack'; ANSI[91] = 'brred';     ANSI[92] = 'brgreen'; ANSI[93] = 'bryellow'
-   ANSI[94] = 'brblue';  ANSI[95] = 'brmagenta'; ANSI[96] = 'brcyan';  ANSI[97] = 'brwhite'; 
-   ANSI.SGR = function SGR(text){ return USE_COLOR? "\033["+text+'m' : '' }
+   ANSI[00] = 'reset';   ANSI[01] = 'bold';      ANSI[04] = 'underline'; ANSI[07] = 'negative'
+   ANSI[30] = 'black';   ANSI[31] = 'red';       ANSI[32] = 'green';     ANSI[33] = 'yellow'
+   ANSI[34] = 'blue';    ANSI[35] = 'magenta';   ANSI[36] = 'cyan';      ANSI[37] = 'white'; ANSI[39] = 'none'
+   ANSI[90] = 'brblack'; ANSI[91] = 'brred';     ANSI[92] = 'brgreen';   ANSI[93] = 'bryellow'
+   ANSI[94] = 'brblue';  ANSI[95] = 'brmagenta'; ANSI[96] = 'brcyan';    ANSI[97] = 'brwhite'; 
+   ANSI.SGR = function SGR(code){ return USE_COLOR? "\033["+code+'m' : '' }
+   ANSI.wrap = function wrap_codes(start, end) { return function wrap_text(text){
+      return ANSI.SGR(start)+text+ANSI.SGR(end) } }
    ANSI.regex = /\x1B\[([0-9]+(;[0-9]+)*)?m/g
    ANSI.strip = function strip(text){ return text.replace(ANSI.regex,'') }
-   ANSI.forEach(function(name, code, _ANSI){ _ANSI[name] = function ANSI(text){
-      return _ANSI.SGR(code) + text + _ANSI.SGR(39) } })
+   ANSI.forEach(function(name, code){ ANSI[name] = ANSI.wrap(code, 39) })
+   ANSI.reset = ANSI.SGR(00)
+   ANSI.bold = ANSI.wrap(1, 22); ANSI.underline = ANSI.wrap(04, 24); ANSI.underline = ANSI.wrap(07, 07)
    
    getter = function getter(object, property, getter) {
       if (!object.hasOwnProperty(property))
