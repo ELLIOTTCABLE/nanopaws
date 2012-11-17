@@ -1,10 +1,10 @@
 #!/usr/bin/env node
-var USE_COLOR = process.env['USE_COLOR'] === 'false' || true
-  ,     DEBUG = process.env['DEBUG']     === 'false' || true
-
+var USE_COLOR      = process.env['USE_COLOR'] === 'false' || true
+  , DEBUG = parseInt(process.env['DEBUG'])
+  , DEBUG = DEBUG === 0? 0:(DEBUG || 7)
 
 ~function(){ var Thing, Association, Execution, Alien, Label, Pair, Instruction, Locals, Juxtapose, Value, parse, Stage, Staging, run
-               , log, I, ANSI, getter
+               , debug, log, P, I, ANSI, getter, noop
    
 , API = function(){
    /* Things */
@@ -23,7 +23,8 @@ var USE_COLOR = process.env['USE_COLOR'] === 'false' || true
    Thing.prototype.name = function name(name) { this.name = name; return this }
    Thing.prototype._name = function _name(name) { this.toString = function toString(){return name}; return this }
    Thing.prototype.toString = function toString() { return this.named? this.name:'' }
-   Thing.prototype.inspect = function inspect() { return ANSI.brblack('❲'+this._id+'❳')+this.toString() } 
+   Thing.prototype.inspect = function inspect() { return Thing.inspect(this, false) } 
+   Thing.inspect = function inspect(it, bare) { return ANSI.brblack('❲'+it._id+'❳')+(bare? '':it.toString()) }
    
    // Since we're doing a associative-array implementation ...
    Thing.prototype.affix = function affix(key, value, responsible) {
@@ -40,7 +41,7 @@ var USE_COLOR = process.env['USE_COLOR'] === 'false' || true
    Execution.prototype.toString = function toString() {
       return ANSI.brmagenta(this.named? '`'+this.name+'`' : '`anon`') }
    Execution.prototype.inspect = function() { var rv = new Array
-      rv.push(ANSI.brwhite('|') + this.stack.map(function(e){
+      rv.push(ANSI.brwhite('|') + this.stack.slice(1).map(function(e){
          return Thing.prototype.inspect.call(e) })
             .join(ANSI.brwhite(', ')) + ANSI.brwhite('|'))
       rv.push(ANSI.brwhite('[') + this.code.map(function(e){
@@ -112,15 +113,18 @@ var USE_COLOR = process.env['USE_COLOR'] === 'false' || true
    
    /* Execution */
    Thing.prototype.handler = new Execution(function _thing_(left, right, context) {
+      DEBUG? log('    × thing: ')(P(left), P(right), P(context)) :0
       for (var i = 0; i < left.members.length; i++) {
          if (left.members[i].to.key.text === right.text) { Stage.stage(context, left.members[i].to.value) } }
          return null; })
    Execution.prototype.handler = new Execution(function _execution_(left, right, context) { var instruction
+      DEBUG? log('    × exe:   ')(P(left), P(right), P(context)) :0
       if (left.native)
          return left.native(right, context)
       if (left.code) {
-         left.stack.push(right)
+         left.stack.push(left.stack.length == 0? null : right)
          while (left.code.length > 0) { instruction = left.code.shift()
+            DEBUG? log('          >> ')(I(left)) :0
             switch (instruction.constructor.name) {
                case 'Locals':
                   left.stack.push(left.locals);
@@ -151,7 +155,7 @@ var USE_COLOR = process.env['USE_COLOR'] === 'false' || true
    
    Stage.next = function next() {
       var staging = Stage.queue.shift()
-      log(I(staging.stagee)+' ✦ '+I(staging.value))
+      debug()(P(staging.stagee)+' × '+P(staging.value))
       if (staging.stagee.handler.native) {
          staging.stagee.handler.native(staging.stagee, staging.value, staging.context) } }
 } // /API
@@ -159,6 +163,8 @@ var USE_COLOR = process.env['USE_COLOR'] === 'false' || true
    /* Wrap it all up */
    run = function run(text) { var
       execution = new Execution(parse(text))._name(ANSI.brmagenta('root'))
+      log()(I(execution))
+      
       execution.locals.affix(new Label('whee!'), new Execution(function(label, context) {
          console.log('whee!')
          Stage.stage(context, null) }))
@@ -179,18 +185,42 @@ var USE_COLOR = process.env['USE_COLOR'] === 'false' || true
          Stage.next() } }
    
    /* elliottcable-Plumbing */
-   I = function I(it) { return it? ANSI.brblack('❲'+it._id+'❳')+it.toString() : ANSI.red('null')  } 
-   log = function log(text) { if (DEBUG) { var line = (new Error).stack.split("\n")[2].split(':')[1]
-      console.log( ANSI.SGR(40)
-        +(log.caller.name || '<anon>')+'('+ANSI.brblack('#'+line)+'): '
-        +([].slice.call(arguments).join(', '))
-        +' '+ANSI.SGR(49) ) }}
+   P = function P(it) {return (log.element||noop)(
+      it instanceof Thing? Thing.prototype.inspect.apply(it) : ANSI.red('null') )}
+   I = function I(it) { var a, b, tag
+      if (!(it instanceof Thing)) return ANSI.red('null')
+      if (/\n/.test(a = it.inspect()) && log.element) { tag = Thing.inspect(it, true)
+         b = log.element(tag + it.toString()); log.extra(tag, a); return b }
+         else return a }
+   
+   debug = function debug(level){ level = level || 5
+      before = (debug.caller.name || '<anon>')
+         +'('+ANSI.brblack('#'+(new Error).stack.split("\n")[2].split(':')[1])+'): '
+      return DEBUG >= level? log(before):new Function }
+   
+   log = function log_start(before){ var indent, elements = new Array
+      if (typeof before === 'number') {indent = before; before = ''}
+                                 else {before = ''+(before||''); indent = ANSI.strip(before).length+1}
+      log.element = function(_){ elements.push([_]); return "\033*"+(elements.length-1) }
+      log.extra   = function(tag, _){ elements[elements.length-1].push([tag, _]); return '' }
+      return function log_end(text){ var
+         output = Array.prototype.slice.call(arguments).join(', ')
+            .replace(/\033\*(\d+)/g, function(_, n, offset, output){ return elements[n].shift() })
+         
+         console.log(ANSI.SGR(40)+before+output+' '+ANSI.SGR(49) )
+         elements.forEach(function(e){e.forEach(function(e){
+            console.log(ANSI.SGR(40)
+            +(e[0]+e[1]).split("\n").map(function(l){
+               return new Array(ANSI.strip(e[0]).length+indent).join(' ')+l+' '
+            }).join("\n").slice(ANSI.strip(e[0]).length)+' '+ANSI.SGR(49)) })})
+         
+         delete log.element; delete log.extra }}
    ANSI = new Array
    ANSI[30] = 'black';   ANSI[31] = 'red';       ANSI[32] = 'green';   ANSI[33] = 'yellow'
    ANSI[34] = 'blue';    ANSI[35] = 'magenta';   ANSI[36] = 'cyan';    ANSI[37] = 'white'; ANSI[39] = 'reset'
    ANSI[90] = 'brblack'; ANSI[91] = 'brred';     ANSI[92] = 'brgreen'; ANSI[93] = 'bryellow'
    ANSI[94] = 'brblue';  ANSI[95] = 'brmagenta'; ANSI[96] = 'brcyan';  ANSI[97] = 'brwhite'; 
-   ANSI.SGR = function SGR(text){ return USE_COLOR? '\033['+text+'m' : '' }
+   ANSI.SGR = function SGR(text){ return USE_COLOR? "\033["+text+'m' : '' }
    ANSI.regex = /\x1B\[([0-9]+(;[0-9]+)*)?m/g
    ANSI.strip = function strip(text){ return text.replace(ANSI.regex,'') }
    ANSI.forEach(function(name, code, _ANSI){ _ANSI[name] = function ANSI(text){
@@ -199,6 +229,7 @@ var USE_COLOR = process.env['USE_COLOR'] === 'false' || true
    getter = function getter(object, property, getter) {
       if (!object.hasOwnProperty(property))
          Object.defineProperty(object, property, { get:getter, enumerable:false }) }
+   noop = function noop(arg){ return arg }
    
    /* Testing */
    API()
