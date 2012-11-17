@@ -3,7 +3,7 @@ var USE_COLOR = process.env['USE_COLOR'] === 'false' || true
   ,     DEBUG = process.env['DEBUG']     === 'false' || true
 
 
-~function(){ var Thing, Association, Execution, Label, Pair, GetLocals, Juxtapose, Value, parse, Stage, Staging, run
+~function(){ var Thing, Association, Execution, Label, Pair, Instruction, Locals, Juxtapose, Value, parse, Stage, Staging, run
                , log, I, ANSI, getter
    
 , API = function(){
@@ -39,7 +39,7 @@ var USE_COLOR = process.env['USE_COLOR'] === 'false' || true
          this.code = code
          this.stack = []
          this.locals = new Thing()._name(ANSI.brblack('locals')) } }
-   Execution.prototype = new Thing()
+ ;(Execution.prototype = new Thing).constructor = Execution
    
    Execution.prototype.toString = function toString() {
       return ANSI.brmagenta(this.named? '`'+this.name+'`' : '´anon´') }
@@ -47,18 +47,23 @@ var USE_COLOR = process.env['USE_COLOR'] === 'false' || true
    Label = function Label(text) {
       Thing.call(this)
       this.text = text }
-   Label.prototype = new Thing()
+ ;(Label.prototype = new Thing).constructor = Label
    
    Label.prototype.toString = function toString() { return ANSI.cyan("'"+this.text+"'") }
    
    /* Bytecode */
-   GetLocals = function GetLocals() {
-      this.type = 'locals' }
-   Juxtapose = function Juxtapose() {
-      this.type = 'juxtapose' }
-   Value = function Value(contents) {
-      this.type = 'value'
+   Instruction = function Instruction() {}
+   
+   Locals = function Locals() { Instruction.call(this) }
+ ;(Locals.prototype = new Instruction).constructor = Locals
+   
+   Juxtapose = function Juxtapose() { Instruction.call(this) }
+ ;(Juxtapose.prototype = new Instruction).constructor = Juxtapose
+   
+   Value = function Value(contents) { Instruction.call(this)
       this.contents = contents }
+ ;(Value.prototype = new Instruction).constructor = Value
+
    
    /* Parsing */
    parse = function parse(text) { var i = 0
@@ -78,7 +83,7 @@ var USE_COLOR = process.env['USE_COLOR'] === 'false' || true
               result = result.concat(text[i++])
            return result && [new Value(new Label(result))] }
       
-      , expr = function expr() { var term, result = [new GetLocals()]
+      , expr = function expr() { var term, result = [new Locals()]
          while (term = paren() || scope() || label())
             result = result.concat(term).concat(new Juxtapose())
          return result }
@@ -98,12 +103,12 @@ var USE_COLOR = process.env['USE_COLOR'] === 'false' || true
       if (left.code) {
          left.stack.push(right)
          while (left.code.length > 0) { instruction = left.code.shift()
-            switch (instruction.type) {
-               case 'locals':
+            switch (instruction.constructor.name) {
+               case 'Locals':
                   left.stack.push(left.locals);
-               break; case 'value':
+               break; case 'Value':
                   left.stack.push(instruction.contents);
-               break; case 'juxtapose':
+               break; case 'Juxtapose':
                   var b = left.stack.pop()
                     , a = left.stack.pop()
                   Stage.stage(a, b, left)
