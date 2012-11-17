@@ -3,18 +3,23 @@ var USE_COLOR      = process.env['USE_COLOR'] === 'false' || true
   , DEBUG = parseInt(process.env['DEBUG'])
   , DEBUG = DEBUG === 0? 0:(DEBUG || 6)
 
-~function(){ var Thing, Association, Execution, Alien, Label, Pair, Instruction, Locals, Juxtapose, Value, parse, Stage, Staging, aliens, run
-               , debug, log, D, P, I, ANSI, getter, noop
+~function(){ var paws = module.exports
+ , Thing, Association, Pair, Label, Execution, Alien
+ , Instruction, Locals, Juxtapose, Value, Stage, Staging
+ , debug, log, D, P, I, ANSI, getter, noop
    
 , API = function(){
    /* Things */
+   paws.Thing =
    Thing = function Thing() {
       this._id = Thing.counter++
       this.members = [] }
    Thing.counter = 1
+   Thing.Association =
    Association = function Association(to, responsible) {
       this.to = to
       this.responsible = responsible || false }
+   Thing.Pair =
    Pair = function Pair(key, value) {
       this.key = key
       this.value = value }
@@ -34,11 +39,13 @@ var USE_COLOR      = process.env['USE_COLOR'] === 'false' || true
       if (key instanceof Label && !value.named) value.name = key.text
       this.members.push(new Association(new Pair(key, value), responsible)) }
    
+   paws.Label =
    Label = function Label(text) { Thing.call(this)
       this.text = text }
  ;(Label.prototype = new Thing).constructor = Label
    Label.prototype.toString = function toString() { return ANSI.cyan("'"+this.text+"'") }
    
+   paws.Execution = 
    Execution = function Execution(code) { Thing.call(this)
       if (typeof code === 'function')
          return new Alien(code)
@@ -59,6 +66,7 @@ var USE_COLOR      = process.env['USE_COLOR'] === 'false' || true
             .join(ANSI.brwhite(' ')) + ANSI.brwhite('|'))
       return rv.join("\n") }
    
+   paws.Alien = 
    Alien = function Alien(code) { Execution.call(this)
       this.native = code
       this.native.wrapper = this
@@ -69,21 +77,26 @@ var USE_COLOR      = process.env['USE_COLOR'] === 'false' || true
    Alien.prototype.inspect = Thing.prototype.inspect
    
    /* Bytecode */
+   paws.Instruction =
    Instruction = function Instruction() {}
    Instruction.prototype.toString = function toString() { return ANSI.brwhite('I') }
    Instruction.prototype.inspect = function inspect() { return this.toString.apply(this, arguments) }
    
+   Instruction.Locals =
    Locals = function Locals() { Instruction.call(this) }
  ;(Locals.prototype = new Instruction).constructor = Locals
    
+   Instruction.Me =
    Me = function Me() { Instruction.call(this) }
  ;(Me.prototype = new Instruction).constructor = Me
    Me.prototype.toString = function toString() { return ANSI.brwhite('I:()') }
    
+   Instruction.Juxtapose =
    Juxtapose = function Juxtapose() { Instruction.call(this) }
  ;(Juxtapose.prototype = new Instruction).constructor = Juxtapose
    Juxtapose.prototype.toString = function toString() { return ANSI.brwhite('×') }
    
+   Instruction.Value
    Value = function Value(contents) { Instruction.call(this)
       this.contents = contents }
  ;(Value.prototype = new Instruction).constructor = Value
@@ -92,7 +105,7 @@ var USE_COLOR      = process.env['USE_COLOR'] === 'false' || true
    
    
    /* Parsing */
-   parse = function parse(text) { var i = 0
+   paws.parse = function parse(text) { var i = 0
       , character = function character(c){ return text[i] === c && ++i }
       , whitespace = function whitespace(){ while (character(' ')); return true }
       , bracket = function bracket(begin, end) { var result
@@ -100,7 +113,7 @@ var USE_COLOR      = process.env['USE_COLOR'] === 'false' || true
                 whitespace() && character(end) &&
                 result }
       
-      , paren = function parse() { var result
+      , paren = function paren() { var result
          if ((result = bracket('(', ')')).length == 1)
             return [new Me()]
          return result }
@@ -148,9 +161,11 @@ var USE_COLOR      = process.env['USE_COLOR'] === 'false' || true
                   return } } } })
    
    /* Staging */
+   paws.Stage =
    Stage = {}
    Stage.queue = []
    
+   Stage.Staging =
    Staging = function Staging(stagee, value, context) {
       this.stagee = stagee
       this.value = value
@@ -174,7 +189,7 @@ var USE_COLOR      = process.env['USE_COLOR'] === 'false' || true
          staging.stagee.handler.native(staging.stagee, staging.value, staging.context) } }
    
    /* Aliens */
-   aliens = {
+   paws.aliens = {
      'whee!': new Execution(function(caller) { Stage.stage(caller, null) 
          console.log('whee!') })
       
@@ -222,8 +237,8 @@ var USE_COLOR      = process.env['USE_COLOR'] === 'false' || true
 } // /API
       
    /* Wrap it all up */
-   run = function run(text) { var
-      root = new Execution(parse(text))._name(ANSI.brmagenta('root'))
+   paws.run = function run(text) {
+      root = new Execution(paws.parse(text))._name(ANSI.brmagenta('root'))
       D(6)? log()(I(root)) :0
       
     , infrastructure = new Thing
@@ -232,7 +247,7 @@ var USE_COLOR      = process.env['USE_COLOR'] === 'false' || true
     ;(function $$(container){
       Object.getOwnPropertyNames(container).forEach(function(key){
          if (container[key] instanceof Execution) return infrastructure.affix(new Label(key), container[key])
-         return $$(container[key]) }) })(aliens)
+         return $$(container[key]) }) })(paws.aliens)
       
       Stage.stage(root, null)
       while (Stage.queue.length > 0) {
@@ -297,9 +312,10 @@ var USE_COLOR      = process.env['USE_COLOR'] === 'false' || true
    
    /* Testing */
    API()
+   paws.SET_DEBUG_LEVEL = function(level){ DEBUG = level }
    
-   switch (process.argv[2]) {
-      case '-f': run(require('fs').readFileSync(process.argv[3], 'utf8'))
-      case '-e': process.argv[2] = process.argv[3]
-        default: run(process.argv[2]) }
-}()
+   if (require.main === module)
+      switch (process.argv[2]) {
+         case '-f': paws.run(require('fs').readFileSync(process.argv[3], 'utf8'))
+         case '-e': process.argv[2] = process.argv[3]
+           default: paws.run(process.argv[2]) } }()
