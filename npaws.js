@@ -134,7 +134,7 @@ var USE_COLOR      = process.env['USE_COLOR'] === 'false' || true
             switch (instruction.constructor.name) {
                case 'Locals':
                   left.stack.push(left.locals);
-               case 'Me':
+               break; case 'Me':
                   left.stack.push(left);
                break; case 'Value':
                   left.stack.push(instruction.contents);
