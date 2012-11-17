@@ -70,6 +70,10 @@ var USE_COLOR = process.env['USE_COLOR'] === 'false' || true
    Locals = function Locals() { Instruction.call(this) }
  ;(Locals.prototype = new Instruction).constructor = Locals
    
+   Me = function Me() { Instruction.call(this) }
+ ;(Me.prototype = new Instruction).constructor = Me
+   Me.prototype.toString = function toString() { return ANSI.brwhite('I:()') }
+   
    Juxtapose = function Juxtapose() { Instruction.call(this) }
  ;(Juxtapose.prototype = new Instruction).constructor = Juxtapose
    Juxtapose.prototype.toString = function toString() { return ANSI.brwhite('×') }
@@ -90,8 +94,10 @@ var USE_COLOR = process.env['USE_COLOR'] === 'false' || true
                 whitespace() && character(end) &&
                 result }
       
-      , paren = function parse() {
-         return bracket('(', ')') }
+      , paren = function parse() { var result
+         if ((result = bracket('(', ')')).length == 1)
+            return [new Me()]
+         return result }
       , scope = function scope() { var result
          return (result = bracket('{', '}')) && [new Value(new Execution(result))] }
       , label = function label(){ whitespace(); var result = ''
@@ -124,6 +130,8 @@ var USE_COLOR = process.env['USE_COLOR'] === 'false' || true
             switch (instruction.constructor.name) {
                case 'Locals':
                   left.stack.push(left.locals);
+               case 'Me':
+                  left.stack.push(left);
                break; case 'Value':
                   left.stack.push(instruction.contents);
                break; case 'Juxtapose':
@@ -159,21 +167,24 @@ var USE_COLOR = process.env['USE_COLOR'] === 'false' || true
    /* Wrap it all up */
    run = function run(text) { var
       execution = new Execution(parse(text))._name(ANSI.brmagenta('root'))
-      execution.locals.affix(new Label('whee!'), new Execution(function(label, context) {
+      execution.locals.affix(new Label('whee!'), new Execution(function(caller) {
          console.log('whee!')
-         Stage.stage(context, null) }))
-      execution.locals.affix(new Label('print'), new Execution(function(label, context) {
+         Stage.stage(caller, null) }))
+      execution.locals.affix(new Label('print'), new Execution(function(caller) {
+                            Stage.result(caller, new Execution(function(label) {
          console.log(label.text)
-         Stage.stage(context, null) }))
-      execution.locals.affix(new Label('inspect'), new Execution(function(thing, context) {
+         Stage.stage(caller, null) })) }))
+      execution.locals.affix(new Label('inspect'), new Execution(function(caller) {
+                              Stage.result(caller, new Execution(function(thing) {
          console.log(thing.inspect())
-         Stage.stage(context, null) }))
-      execution.locals.affix(new Label('affix'), new Execution(function(receiver, context) {
-                           Stage.result(context, new Execution(function(label, context) {
-                           Stage.result(context, new Execution(function(value, context) {
+         Stage.stage(caller, null) })) }))
+      execution.locals.affix(new Label('affix'), new Execution(function(caller) {
+                            Stage.result(caller, new Execution(function(receiver) {
+                            Stage.result(caller, new Execution(function(label) {
+                            Stage.result(caller, new Execution(function(value) {
          receiver.affix(label, value)
-         Stage.stage(context, null) })) })) }))
-      execution.locals.affix(new Label('a'), new Label('b'), true)
+         Stage.stage(caller, null) })) })) })) }))
+      
       Stage.stage(execution, null)
       while (Stage.queue.length > 0) {
          Stage.next() } }
