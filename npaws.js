@@ -162,8 +162,15 @@ var USE_COLOR      = process.env['USE_COLOR'] === 'false' || true
    
    /* Staging */
    paws.World =
-   World = function() {
-      this.queue = [] }
+   World = function() { var that = this
+      that.infrastructure = new Thing
+    ;(function $$(container){
+         Object.getOwnPropertyNames(container).forEach(function(key){
+            if (container[key] instanceof Execution)
+               return that.infrastructure.affix(new Label(key), container[key])
+            return $$(container[key]) }) })(paws.aliens)
+      
+      that.queue = [] }
    
    World.Staging =
    Staging = function Staging(stagee, value, context) {
@@ -187,6 +194,10 @@ var USE_COLOR      = process.env['USE_COLOR'] === 'false' || true
       var staging = this.queue.shift()
       if (staging.stagee.handler.native) {
          staging.stagee.handler.native(this, staging.stagee, staging.value, staging.context) } }
+   
+   World.prototype.run = function run() {
+      while (this.queue.length > 0) {
+         this.next() } }
    
    /* Aliens */
    paws.aliens = {
@@ -237,19 +248,14 @@ var USE_COLOR      = process.env['USE_COLOR'] === 'false' || true
 } // /API
       
    /* Wrap it all up */
-   paws.run = function run(text) { var world = new World, infrastructure = new Thing
-      root = new Execution(paws.parse(text))._name(ANSI.brmagenta('root'))
+   paws.run = function run(text) { var world = new World 
+    , root = new Execution(paws.parse(text))._name(ANSI.brmagenta('root'))
       D(6)? log()(I(root)) :0
       
-    ;(function $$(container){
-      Object.getOwnPropertyNames(container).forEach(function(key){
-         if (container[key] instanceof Execution) return infrastructure.affix(new Label(key), container[key])
-         return $$(container[key]) }) })(paws.aliens)
-      root.locals.affix(new Label('infrastructure'), infrastructure)
+      root.locals.affix(new Label('infrastructure'), world.infrastructure)
       
       world.stage(root, null)
-      while (world.queue.length > 0) {
-         world.next() }
+      world.run()
       
       if (!root.code)
          D(6)? log()(ANSI.bold('-- Complete!')) :0 }
