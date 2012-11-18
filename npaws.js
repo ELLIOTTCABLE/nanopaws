@@ -266,11 +266,13 @@ var USE_COLOR      = process.env['USE_COLOR'] === 'false' || true
          b = log.element(tag + it.toString()); log.extra(tag, a); return b }
          else return a }
    
+   paws.debug =
    debug = function debug(level, before){ level = level || 7; before = before || ''
       before = (debug.caller.name || '<anon>')
          +'('+ANSI.brblack('#'+(new Error).stack.split("\n")[2].split(':')[1])+'): '+before
       return DEBUG >= level? log(before):new Function }
    
+   debug.log =
    log = function log_start(before){ var indent, elements = new Array
       if (typeof before === 'number') {indent = before; before = ''}
                                  else {before = ''+(before||''); indent = ANSI.strip(before).length+1}
@@ -288,6 +290,8 @@ var USE_COLOR      = process.env['USE_COLOR'] === 'false' || true
             }).join("\n").slice(ANSI.strip(e[0]).length)+' '+ANSI.SGR(49)) })})
          
          delete log.element; delete log.extra }}
+   
+   debug.ANSI =
    ANSI = new Array
    ANSI[00] = 'reset';   ANSI[01] = 'bold';      ANSI[04] = 'underline'; ANSI[07] = 'negative'
    ANSI[30] = 'black';   ANSI[31] = 'red';       ANSI[32] = 'green';     ANSI[33] = 'yellow'
