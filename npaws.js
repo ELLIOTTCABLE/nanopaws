@@ -5,7 +5,7 @@ var USE_COLOR      = process.env['USE_COLOR'] === 'false' || true
 
 ~function(){ var paws = module.exports
  , Thing, Association, Pair, Label, Execution, Alien
- , Instruction, Locals, Juxtapose, Value, Stage, Staging
+ , Instruction, Locals, Juxtapose, Value, World, Staging
  , debug, log, D, P, I, ANSI, getter, noop
    
 , API = function(){
@@ -136,13 +136,13 @@ var USE_COLOR      = process.env['USE_COLOR'] === 'false' || true
       return program() }
    
    /* Execution */
-   Thing.prototype.handler = new Execution(function _thing_(left, right, context) {
+   Thing.prototype.handler = new Execution(function _thing_(world, left, right, context) {
       D(7)? log('    × thing: ')(P(left), P(right), P(context)) :0
-         Stage.stage(context, left.lookup(right)) })
-   Execution.prototype.handler = new Execution(function _execution_(left, right, context) { var instruction
+         world.stage(context, left.lookup(right)) })
+   Execution.prototype.handler = new Execution(function _execution_(world, left, right, context) { var instruction
       D(7)? log('    × exe:   ')(P(left), P(right), P(context)) :0
       if (left.native)
-         return left.native(right, context)
+         return left.native.call(world, right, context)
       if (left.code) {
          left.stack.push(left.stack.length == 0? null : right)
          while (left.code.length > 0) { instruction = left.code.shift()
@@ -157,15 +157,15 @@ var USE_COLOR      = process.env['USE_COLOR'] === 'false' || true
                break; case 'Juxtapose':
                   var b = left.stack.pop()
                     , a = left.stack.pop()
-                  Stage.stage(a, b, left)
+                  world.stage(a, b, left)
                   return } } } })
    
    /* Staging */
-   paws.Stage =
-   Stage = {}
-   Stage.queue = []
+   paws.World =
+   World = function() {
+      this.queue = [] }
    
-   Stage.Staging =
+   World.Staging =
    Staging = function Staging(stagee, value, context) {
       this.stagee = stagee
       this.value = value
@@ -173,85 +173,83 @@ var USE_COLOR      = process.env['USE_COLOR'] === 'false' || true
    Staging.prototype.toString = function toString() {
       return this.stagee.toString()+'×'+this.value.toString() }
    
-   Stage.stage = function stage(stagee, value, context) {
-      Stage.queue.push(new Staging(stagee, value, context)) }
-   Stage.result = function result(context, value) { var caller = arguments.callee.caller
+   World.prototype.stage = function stage(stagee, value, context) {
+      this.queue.push(new Staging(stagee, value, context)) }
+   World.prototype.result = function result(context, value) { var caller = arguments.callee.caller
       if (value instanceof Execution && arguments.callee.caller.wrapper instanceof Execution
       &&  caller.wrapper.named && !value.named)
           value.name = caller.wrapper.name + '.' // Accrue periods onto the name for each coconsumer
-      Stage.stage(context, value || null) }
+      this.stage(context, value || null) }
    
-   Stage.next = function next() {
-      debug()('['+Stage.queue.map(function(st){
+   World.prototype.next = function next() {
+      debug()('['+this.queue.map(function(st){
          return P(st.stagee)+' × '+P(st.value)}).join(', ')+']')
-      var staging = Stage.queue.shift()
+      var staging = this.queue.shift()
       if (staging.stagee.handler.native) {
-         staging.stagee.handler.native(staging.stagee, staging.value, staging.context) } }
+         staging.stagee.handler.native(this, staging.stagee, staging.value, staging.context) } }
    
    /* Aliens */
    paws.aliens = {
-     'whee!': new Execution(function(caller) { Stage.stage(caller, null) 
+     'whee!': new Execution(function(caller) { this.stage(caller, null) 
          console.log('whee!') })
       
     , print: new Execution(function(caller) {
-         Stage.result(caller, new Execution(function(label) { Stage.stage(caller, null)
+         this.result(caller, new Execution(function(label) { this.stage(caller, null)
             console.log(label.text) })) })
       
     , inspect: new Execution(function(caller) {
-         Stage.result(caller, new Execution(function(thing) { Stage.stage(caller, null)
+         this.result(caller, new Execution(function(thing) { this.stage(caller, null)
             console.log(thing.toString())
             D(5)? log(3)(thing.inspect()) :0 })) })
       
     , affix: new Execution(function(caller) {
-         Stage.result(caller, new Execution(function(receiver) {
-         Stage.result(caller, new Execution(function(label) {
-         Stage.result(caller, new Execution(function(value) { Stage.stage(caller, null)
+         this.result(caller, new Execution(function(receiver) {
+         this.result(caller, new Execution(function(label) {
+         this.result(caller, new Execution(function(value) { this.stage(caller, null)
             receiver.affix(label, value) })) })) })) })
       
     , get: new Execution(function(caller) {
-         Stage.result(caller, new Execution(function(receiver) {
-         Stage.result(caller, new Execution(function(number) {
-            Stage.result(caller, receiver.members[parseInt(number.text)].to.value) })) })) })
+         this.result(caller, new Execution(function(receiver) {
+         this.result(caller, new Execution(function(number) {
+            this.result(caller, receiver.members[parseInt(number.text)].to.value) })) })) })
       
     , lookup: new Execution(function(caller) {
-         Stage.result(caller, new Execution(function(receiver) {
-         Stage.result(caller, new Execution(function(key) {
-            Stage.result(caller, receiver.lookup(key)) })) })) })
+         this.result(caller, new Execution(function(receiver) {
+         this.result(caller, new Execution(function(key) {
+            this.result(caller, receiver.lookup(key)) })) })) })
       
       // Shouldn't rightfully have a “key” argument, but we're doing ‘pairs’ here
     , set: new Execution(function(caller) {
-         Stage.result(caller, new Execution(function(receiver) {
-         Stage.result(caller, new Execution(function(number) {
-         Stage.result(caller, new Execution(function(key) {
-         Stage.result(caller, new Execution(function(value) { Stage.stage(caller, null)
+         this.result(caller, new Execution(function(receiver) {
+         this.result(caller, new Execution(function(number) {
+         this.result(caller, new Execution(function(key) {
+         this.result(caller, new Execution(function(value) { this.stage(caller, null)
             receiver.members[parseInt(number.text)]
                = new Association(new Pair(key, value)) })) })) })) })) })
       
     , execution: {
          unstage: new Execution(function(){})
        , stage: new Execution(function(caller){
-            Stage.result(caller, new Execution(function(receiver) {
-            Stage.result(caller, new Execution(function(value) { Stage.stage(caller, null)
-               Stage.stage(receiver, value) })) })) })
+            this.result(caller, new Execution(function(receiver) {
+            this.result(caller, new Execution(function(value) { this.stage(caller, null)
+               this.stage(receiver, value) })) })) })
       } }
 } // /API
       
    /* Wrap it all up */
-   paws.run = function run(text) {
+   paws.run = function run(text) { var world = new World, infrastructure = new Thing
       root = new Execution(paws.parse(text))._name(ANSI.brmagenta('root'))
       D(6)? log()(I(root)) :0
-      
-    , infrastructure = new Thing
-      root.locals.affix(new Label('infrastructure'), infrastructure)
       
     ;(function $$(container){
       Object.getOwnPropertyNames(container).forEach(function(key){
          if (container[key] instanceof Execution) return infrastructure.affix(new Label(key), container[key])
          return $$(container[key]) }) })(paws.aliens)
+      root.locals.affix(new Label('infrastructure'), infrastructure)
       
-      Stage.stage(root, null)
-      while (Stage.queue.length > 0) {
-         Stage.next() }
+      world.stage(root, null)
+      while (world.queue.length > 0) {
+         world.next() }
       
       if (!root.code)
          D(6)? log()(ANSI.bold('-- Complete!')) :0 }

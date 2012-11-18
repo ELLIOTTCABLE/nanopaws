@@ -1,0 +1,3 @@
+infrastructure affix() (locals) foo {infrastructure whee!()}
+infrastructure affix() (infrastructure lookup() (foo) locals) infrastructure (infrastructure)
+infrastructure stage() (foo) bar
