@@ -1,15 +1,16 @@
 {     "contributors" :["elliottcable (http://ell.io/tt)"
                      , "Micah Johnston (http://twitter.com/micahrjohnston)"                        ]
-   
+
 ,       "name" : "nanopaws"
 ,    "version" : "0.0.1"
-   
+,    "license": "ISC"
+
 ,   "homepage" : "https://github.com/micahjohnston/nanopaws"
 , "repository" :{"type":"git", "url":"git://github.com/micahjohnston/nanopaws.git"}
 ,       "bugs" : "https://github.com/micahjohnston/nanopaws/issues"
-   
+
 ,       "main" : "npaws"
 ,    "scripts" :{"test":"grunt test"}
-   
+
 ,          "engines" :{"node":"~0.8.0"}
                                                                                                    }
